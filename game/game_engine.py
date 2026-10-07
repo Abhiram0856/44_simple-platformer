@@ -147,11 +147,14 @@ class GameEngine:
         self.player.y += self.player.vy
         self.player.on_ground = False
 
-        for platform in self.platforms:
-            if self.player.vy >= 0:
-                player_bottom_previous = previous_y + self.player.height
-                player_bottom_current = self.player.y + self.player.height
+        # Find the first platform encountered along the player's downward path.
+        landing_platform = None
 
+        if self.player.vy >= 0:
+            player_bottom_previous = previous_y + self.player.height
+            player_bottom_current = self.player.y + self.player.height
+
+            for platform in self.platforms:
                 crossed_platform = (
                     player_bottom_previous <= platform.y
                     and player_bottom_current >= platform.y
@@ -163,10 +166,16 @@ class GameEngine:
                 )
 
                 if crossed_platform and horizontal_overlap:
-                    self.player.y = platform.y - self.player.height
-                    self.player.vy = 0
-                    self.player.on_ground = True
-                    break
+                    if (
+                        landing_platform is None
+                        or platform.y < landing_platform.y
+                    ):
+                        landing_platform = platform
+
+        if landing_platform is not None:
+            self.player.y = landing_platform.y - self.player.height
+            self.player.vy = 0
+            self.player.on_ground = True
 
         for hazard in self.hazards:
             if self.player.rect().colliderect(hazard.rect()):
