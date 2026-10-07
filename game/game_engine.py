@@ -15,14 +15,17 @@ class GameEngine:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.gravity = 0.6
+        self.difficulties = {
+            "Easy": {"gravity": 0.45, "jump_strength": -13},
+            "Medium": {"gravity": 0.6, "jump_strength": -12},
+            "Hard": {"gravity": 0.85, "jump_strength": -11},
+        }
+        self.difficulty = "Medium"
+        self.gravity = self.difficulties[self.difficulty]["gravity"]
 
         self.start_x, self.start_y = 40, height - 120
         self.player = Player(self.start_x, self.start_y)
 
-        # A simple hand-built level: platforms with gaps between them
-        # (falling into a gap means falling off the bottom of the
-        # screen), one hazard, and a goal near the right edge.
         ground_y = height - 40
         self.platforms = [
             Platform(0, ground_y, 160),
@@ -37,6 +40,7 @@ class GameEngine:
         self.font = pygame.font.SysFont("Arial", 30)
         self.game_over_font = pygame.font.SysFont("Arial", 64)
         self.game_over_instruction_font = pygame.font.SysFont("Arial", 26)
+        self.difficulty_font = pygame.font.SysFont("Arial", 30)
         self.game_over = False
         self.exit_requested = False
 
@@ -44,10 +48,14 @@ class GameEngine:
         if event.type != pygame.KEYDOWN:
             return
 
-        # Once the game is over, wait for the player's input instead
-        # of continuing normal gameplay.
         if self.game_over:
-            if event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
+            if event.key in (pygame.K_1, pygame.K_e):
+                self.restart("Easy")
+            elif event.key in (pygame.K_2, pygame.K_m):
+                self.restart("Medium")
+            elif event.key in (pygame.K_3, pygame.K_h):
+                self.restart("Hard")
+            elif event.key in (pygame.K_x, pygame.K_ESCAPE):
                 self.exit_requested = True
             return
 
@@ -68,12 +76,26 @@ class GameEngine:
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.player.vx = self.player.speed
 
+    def restart(self, difficulty):
+        settings = self.difficulties[difficulty]
+        self.difficulty = difficulty
+        self.gravity = settings["gravity"]
+
+        self.player.x = self.start_x
+        self.player.y = self.start_y
+        self.player.vx = 0
+        self.player.vy = 0
+        self.player.jump_strength = settings["jump_strength"]
+        self.player.on_ground = False
+
+        self.score = 0
+        self.game_over = False
+        self.exit_requested = False
+
     def update(self):
         if self.game_over:
             return
 
-        # Remember the previous vertical position so we can detect
-        # crossing a platform even when falling quickly.
         previous_y = self.player.y
 
         self.player.vy += self.gravity
@@ -81,8 +103,6 @@ class GameEngine:
         self.player.y += self.player.vy
         self.player.on_ground = False
 
-        # Reliable platform collision: detect when the player's
-        # bottom crosses the top of a platform while descending.
         for platform in self.platforms:
             if self.player.vy >= 0:
                 player_bottom_previous = previous_y + self.player.height
@@ -133,9 +153,14 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
+        difficulty_text = self.difficulty_font.render(
+            f"Difficulty: {self.difficulty}",
+            True,
+            WHITE
+        )
+        screen.blit(difficulty_text, (10, 45))
+
         if self.game_over:
-            # Display the final result inside the game window rather
-            # than printing it to the console.
             overlay = pygame.Surface(
                 (self.width, self.height),
                 pygame.SRCALPHA
@@ -153,8 +178,13 @@ class GameEngine:
                 True,
                 WHITE
             )
-            instruction_text = self.game_over_instruction_font.render(
-                "Press Enter or Esc to exit",
+            difficulty_text = self.difficulty_font.render(
+                "1/E: Easy    2/M: Medium    3/H: Hard",
+                True,
+                WHITE
+            )
+            exit_text = self.game_over_instruction_font.render(
+                "X or Esc: Exit",
                 True,
                 WHITE
             )
@@ -162,20 +192,27 @@ class GameEngine:
             screen.blit(
                 game_over_text,
                 game_over_text.get_rect(
-                    center=(self.width // 2, self.height // 2 - 80)
+                    center=(self.width // 2, self.height // 2 - 110)
                 )
             )
 
             screen.blit(
                 final_score_text,
                 final_score_text.get_rect(
-                    center=(self.width // 2, self.height // 2)
+                    center=(self.width // 2, self.height // 2 - 35)
                 )
             )
 
             screen.blit(
-                instruction_text,
-                instruction_text.get_rect(
-                    center=(self.width // 2, self.height // 2 + 60)
+                difficulty_text,
+                difficulty_text.get_rect(
+                    center=(self.width // 2, self.height // 2 + 35)
+                )
+            )
+
+            screen.blit(
+                exit_text,
+                exit_text.get_rect(
+                    center=(self.width // 2, self.height // 2 + 85)
                 )
             )
