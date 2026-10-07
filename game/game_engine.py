@@ -121,17 +121,20 @@ class GameEngine:
             self.player.vx = self.player.speed
 
     def restart(self, difficulty):
+        # Apply the selected difficulty's physics settings.
         settings = self.difficulties[difficulty]
         self.difficulty = difficulty
         self.gravity = settings["gravity"]
+        self.player.jump_strength = settings["jump_strength"]
 
+        # Reset the player to the starting state.
         self.player.x = self.start_x
         self.player.y = self.start_y
         self.player.vx = 0
         self.player.vy = 0
-        self.player.jump_strength = settings["jump_strength"]
         self.player.on_ground = False
 
+        # Start a fresh run with a reset score.
         self.score = 0
         self.game_over = False
         self.exit_requested = False
