@@ -35,13 +35,30 @@ class GameEngine:
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
+        self.game_over_font = pygame.font.SysFont("Arial", 64)
+        self.game_over_instruction_font = pygame.font.SysFont("Arial", 26)
         self.game_over = False
+        self.exit_requested = False
 
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
+        if event.type != pygame.KEYDOWN:
+            return
+
+        # Once the game is over, wait for the player's input instead
+        # of continuing normal gameplay.
+        if self.game_over:
+            if event.key in (pygame.K_RETURN, pygame.K_ESCAPE):
+                self.exit_requested = True
+            return
+
+        if event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
             self.player.jump()
 
     def handle_input(self):
+        if self.game_over:
+            self.player.vx = 0
+            return
+
         keys = pygame.key.get_pressed()
         self.player.vx = 0
 
@@ -116,6 +133,49 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
-        if self.game_over and not getattr(self, "_game_over_logged", False):
-            print("Game over! Final score:", self.score)
-            self._game_over_logged = True
+        if self.game_over:
+            # Display the final result inside the game window rather
+            # than printing it to the console.
+            overlay = pygame.Surface(
+                (self.width, self.height),
+                pygame.SRCALPHA
+            )
+            overlay.fill((0, 0, 0, 180))
+            screen.blit(overlay, (0, 0))
+
+            game_over_text = self.game_over_font.render(
+                "GAME OVER",
+                True,
+                WHITE
+            )
+            final_score_text = self.font.render(
+                f"Final Score: {self.score}",
+                True,
+                WHITE
+            )
+            instruction_text = self.game_over_instruction_font.render(
+                "Press Enter or Esc to exit",
+                True,
+                WHITE
+            )
+
+            screen.blit(
+                game_over_text,
+                game_over_text.get_rect(
+                    center=(self.width // 2, self.height // 2 - 80)
+                )
+            )
+
+            screen.blit(
+                final_score_text,
+                final_score_text.get_rect(
+                    center=(self.width // 2, self.height // 2)
+                )
+            )
+
+            screen.blit(
+                instruction_text,
+                instruction_text.get_rect(
+                    center=(self.width // 2, self.height // 2 + 60)
+                )
+            )
